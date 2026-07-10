@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supraervas - Painel de Controle de Produção Monster</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+/* ==== Paleta inspirada em Monster Body (preto + verde neon) ==== */
+--verde-escuro:#0F3D1C;
+--verde:#2FA435;
+--verde-claro:#8FE23A;
+--verde-neon:#A6FF2E;
+--verde-neon-2:#C6FF6B;
+--verde-bg:#12241A;
+--ambar:#FFB300;
+--ambar-bg:#241E10;
+--azul:#22C7E5;
+--azul-bg:#0F2226;
+--azul-esc:#0FA8C4;
+--roxo:#C86BFF;
+--roxo-bg:#221228;
+--cinza-900:#EAF3EC;
+--cinza-600:#A9BBB0;
+--cinza-400:#75897E;
+--cinza-200:#26332B;
+--cinza-100:#131A15;
+--preto:#0A0D0B;
+--preto-2:#050705;
+--painel:#111814;
+--branco:#FFFFFF;
+--vermelho:#FF5A5A;
+--sombra: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+--sombra-hover: 0 10px 24px rgba(0,0,0,.55), 0 0 0 1px rgba(166,255,46,.15);
+--glow-neon: 0 0 14px rgba(166,255,46,.35);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;font-family:'Rajdhani',Roboto,Arial,sans-serif;
+  background:
+    repeating-linear-gradient(135deg, rgba(166,255,46,.025) 0px, rgba(166,255,46,.025) 2px, transparent 2px, transparent 26px),
+    var(--preto-2);
+  color:var(--cinza-900);
+}
+h1,h2,h3,.op-num,.pipe-step,.rotulo,.badge-etapa-cartao,.tag-familia,.grupo-producao-titulo{
+  font-family:'Oswald',Arial,sans-serif;
+}
+
+/* ===== HEADER ===== */
+header{
+  position:relative;overflow:hidden;
+  background:
+    repeating-linear-gradient(125deg, rgba(166,255,46,.10) 0px, rgba(166,255,46,.10) 3px, transparent 3px, transparent 34px),
+    linear-gradient(120deg,var(--preto),#0d1a0f 55%,var(--verde-escuro));
+  color:#fff;padding:18px 28px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  box-shadow:0 2px 18px rgba(0,0,0,.6);
+  border-bottom:2px solid var(--verde-neon);
+}
+header .titulo{display:flex;align-items:center;gap:12px;}
+header .titulo .folha{
+  width:42px;height:42px;border-radius:10px;
+  background:radial-gradient(circle at 35% 30%,var(--verde-neon),var(--verde-escuro) 75%);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:var(--glow-neon);
+}
+header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#fff;text-shadow:0 0 12px rgba(166,255,46,.35);}
+header p{margin:0;font-size:12.5px;opacity:.8;color:var(--verde-neon-2);letter-spacing:.3px;}
+.upload-area{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.upload-btn,.refresh-btn{
+  background:var(--verde-neon);color:#0A1206;padding:9px 16px;border-radius:8px;
+  font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:8px;
+  box-shadow:var(--glow-neon);transition:.15s;border:none;text-transform:uppercase;letter-spacing:.3px;
+}
+.upload-btn:hover,.refresh-btn:hover{transform:translateY(-1px);box-shadow:0 0 20px rgba(166,255,46,.6);background:var(--verde-neon-2);}
+#arquivoInput{display:none;}
+.upload-status{font-size:12px;color:#fff;opacity:.9;max-width:260px;}
+.refresh-status{font-size:11.5px;color:var(--cinza-400);opacity:.9;}
+
+/* ===== PIPELINE BANNER ===== */
+.pipeline-bar{
+  background:var(--painel);padding:12px 22px;
+  display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;
+  border-bottom:2px solid var(--cinza-200);box-shadow:var(--sombra);
+}
+.pipe-step{
+  display:flex;align-items:center;gap:6px;padding:7px 16px;
+  border-radius:20px;font-size:12px;font-weight:700;color:#666;
+  border:2px solid #2a2f2b;background:#0c100d;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px;
+}
+.pipe-step.hall-s   {border-color:var(--ambar);color:var(--ambar);background:var(--ambar-bg);}
+.pipe-step.pes-s    {border-color:var(--azul);color:var(--azul);background:var(--azul-bg);}
+.pipe-step.mis-s    {border-color:var(--roxo);color:var(--roxo);background:var(--roxo-bg);}
+.pipe-step.fim-s    {border-color:var(--verde-neon);color:var(--verde-neon);background:var(--verde-bg);}
+.pipe-arrow{color:#3a453d;font-size:18px;margin:0 6px;}
+.pipe-cnt{
+  display:inline-block;background:rgba(255,255,255,.08);border-radius:20px;
+  padding:1px 8px;font-size:11px;margin-left:5px;
+}
+
+/* ===== BOARD ===== */
+main{padding:22px;max-width:1700px;margin:0 auto;}
+.board{
+  display:grid;
+  grid-template-columns: minmax(280px,1fr) minmax(560px,2fr) minmax(280px,1fr);
+  gap:16px;align-items:start;
+}
+@media(max-width:1200px){.board{grid-template-columns:1fr;}}
+
+.coluna{background:var(--painel);border:1px solid var(--cinza-200);border-radius:14px;box-shadow:var(--sombra);min-height:200px;display:flex;flex-direction:column;overflow:hidden;}
+.coluna-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--cinza-200);position:sticky;top:0;}
+.coluna-header .rotulo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13.5px;color:var(--cinza-900);text-transform:uppercase;letter-spacing:.4px;}
+.dot{width:9px;height:9px;border-radius:50%;}
+
+/* Cores por coluna */
+.hall       .coluna-header{background:var(--ambar-bg);}
+.hall       .dot{background:var(--ambar);box-shadow:0 0 8px var(--ambar);}
+.pesagem    .coluna-header{background:var(--azul-bg);}
+.pesagem    .dot{background:var(--azul);box-shadow:0 0 8px var(--azul);}
+.mistura    .coluna-header{background:var(--roxo-bg);}
+.mistura    .dot{background:var(--roxo);box-shadow:0 0 8px var(--roxo);}
+.final      .coluna-header{background:var(--verde-bg);}
+.final      .dot{background:var(--verde-neon);box-shadow:0 0 8px var(--verde-neon);}
+
+.contador{background:rgba(255,255,255,.08);border-radius:20px;padding:2px 10px;font-size:12.5px;font-weight:700;color:var(--cinza-900);}
+.cartoes{padding:12px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:80px;}
+.vazio{text-align:center;color:var(--cinza-400);font-size:13px;padding:26px 10px;border:1.5px dashed var(--cinza-200);border-radius:10px;}
+
+/* ===== GRUPO "EM PRODUÇÃO" (Pesagem + Mistura) ===== */
+.grupo-producao{display:flex;flex-direction:column;gap:14px;}
+.grupo-producao-banner{
+  display:flex;align-items:center;justify-content:center;
+  border-radius:14px;
+  border:1px solid var(--verde-neon);box-shadow:var(--glow-neon);
+  background:var(--preto);padding:14px 18px;
+}
+.grupo-producao-banner .faixa{
+  display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
+}
+.grupo-producao-titulo{
+  color:var(--verde-neon);font-weight:700;font-size:15px;text-transform:uppercase;
+  letter-spacing:.6px;text-shadow:0 0 10px rgba(166,255,46,.5);margin:0;
+}
+.grupo-producao-sub{color:var(--cinza-600);font-size:11.5px;letter-spacing:.2px;}
+.sub-board{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.sub-board{grid-template-columns:1fr;}}
+
+/* ===== CARTÕES ===== */
+.cartao{
+  background:var(--cinza-100);border:1px solid var(--cinza-200);
+  border-left:4px solid var(--ambar);border-radius:10px;
+  padding:12px 13px;box-shadow:var(--sombra);transition:.15s;cursor:pointer;
+}
+.cartao:hover{box-shadow:var(--sombra-hover);transform:translateY(-1px);border-left-width:6px;}
+.pesagem  .cartao{border-left-color:var(--azul);}
+.mistura  .cartao{border-left-color:var(--roxo);}
+.final    .cartao{border-left-color:var(--verde-neon);opacity:.92;}
+
+/* Badge de etapa dentro do cartão */
+.badge-etapa-cartao{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:12px;
+  margin-bottom:6px;
+}
+.badge-pesagem-c{background:var(--azul-bg);color:var(--azul);}
+.badge-mistura-c{background:var(--roxo-bg);color:var(--roxo);}
+
+.cartao .linha-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;}
+.cartao .op-num{font-weight:800;font-size:13.5px;color:var(--verde-neon);letter-spacing:.3px;}
+.cartao .data-emissao{font-size:11px;color:var(--cinza-400);white-space:nowrap;}
+.cartao .descricao{font-weight:600;font-size:13.5px;margin-bottom:6px;color:var(--cinza-900);}
+.cartao .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12px;color:var(--cinza-600);margin-bottom:10px;}
+.cartao .meta b{color:var(--cinza-900);font-weight:600;}
+
+.btn{width:100%;border:none;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;text-align:center;text-decoration:none;display:block;box-sizing:border-box;text-transform:uppercase;letter-spacing:.3px;}
+.btn-iniciar{background:var(--verde-neon);color:#0A1206;}
+.btn-iniciar:hover{background:var(--verde-neon-2);box-shadow:var(--glow-neon);}
+.btn-registrar-pes{background:var(--azul);color:#04202A;}
+.btn-registrar-pes:hover{background:var(--azul-esc);}
+.btn-registrar-mis{background:var(--roxo);color:#1E0B2E;}
+.btn-registrar-mis:hover{background:#D98BFF;}
+.btn-devolver{width:100%;border:1.5px solid var(--cinza-200);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--cinza-600);margin-top:6px;}
+.btn-devolver:hover{border-color:var(--ambar);color:var(--ambar);}
+.tag-concluida{display:inline-flex;align-items:center;gap:5px;background:var(--verde-bg);color:var(--verde-neon);font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:20px;}
+.tag-familia{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;letter-spacing:.2px;}
+
+.tempo-parado{
+  font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;margin-top:6px;
+  display:flex;align-items:center;gap:5px;letter-spacing:.2px;
+}
+.tempo-parado.tempo-ok{background:var(--verde-bg);color:var(--verde-neon-2);}
+.tempo-parado.tempo-alerta{background:var(--ambar-bg);color:var(--ambar);}
+.tempo-parado.tempo-critico{background:rgba(255,90,90,.14);color:var(--vermelho);}
+.fam-capsula{background:#2A1A3D;color:#D9B3FF;}
+.fam-comprimido{background:#0F2733;color:#7FDBFF;}
+.fam-soluvel{background:#332411;color:#FFB877;}
+.fam-outro{background:var(--cinza-200);color:var(--cinza-600);}
+.final .meta-final{font-size:11.5px;color:var(--cinza-600);border-top:1px dashed var(--cinza-200);padding-top:7px;margin-top:2px;}
+
+/* ===== DASHBOARD OEE (velocímetros) ===== */
+.oee-dashboard{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  padding:12px;border-bottom:1px solid var(--cinza-200);background:rgba(255,255,255,.02);
+}
+.gauge-card{background:var(--cinza-100);border:1px solid var(--cinza-200);border-radius:10px;padding:8px 4px 9px;text-align:center;}
+.gauge-titulo{font-size:9px;font-weight:700;color:var(--cinza-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px;}
+.gauge-sub{font-size:10.5px;font-weight:700;color:var(--cinza-900);margin-top:1px;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--verde-neon);color:#0A1206;padding:12px 20px;border-radius:9px;font-size:13.5px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.5),var(--glow-neon);display:none;z-index:100;}
+
+/* ===== MODAL ===== */
+.overlay-ficha{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:20px;z-index:200;}
+.overlay-ficha.ativo{display:flex;}
+.modal-ficha{background:var(--painel);border:1px solid var(--verde-neon);border-radius:16px;max-width:780px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6),var(--glow-neon);}
+.ficha-topo{padding:20px 26px;border-bottom:2px solid var(--verde-neon);display:flex;justify-content:space-between;align-items:flex-start;gap:16px;position:sticky;top:0;background:var(--painel);border-radius:16px 16px 0 0;}
+.ficha-topo .marca{font-size:18px;font-weight:800;color:var(--verde-neon);text-transform:uppercase;letter-spacing:.4px;}
+.ficha-topo .subtitulo{font-size:11px;color:var(--cinza-400);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:2px;}
+.ficha-topo .op-box{text-align:right;}
+.ficha-topo .op-box .rotulo{font-size:10.5px;color:var(--cinza-400);text-transform:uppercase;font-weight:700;}
+.ficha-topo .op-box .valor{font-size:22px;font-weight:800;font-family:Consolas,monospace;color:var(--cinza-900);}
+.ficha-fechar{background:var(--cinza-200);border:none;border-radius:8px;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--cinza-900);}
+.ficha-info{padding:18px 26px;border-bottom:1px solid var(--cinza-200);}
+.ficha-grid-info{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+@media(max-width:640px){.ficha-grid-info{grid-template-columns:repeat(2,1fr);}}
+.ficha-campo .rotulo{font-size:10px;color:var(--cinza-400);text-transform:uppercase;font-weight:700;margin-bottom:2px;}
+.ficha-campo .valor{font-size:13.5px;font-weight:600;color:var(--cinza-900);}
+.ficha-produto{padding:16px 26px;background:var(--verde-bg);border-bottom:1px solid var(--cinza-200);display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
+.ficha-produto .nome{font-size:15px;font-weight:800;color:var(--cinza-900);}
+.ficha-produto .grupo{font-size:11px;color:var(--verde-neon);font-weight:600;margin-top:2px;}
+.ficha-produto .qtde-valor{font-size:20px;font-weight:800;color:var(--verde-neon);text-align:right;}
+.ficha-produto .qtde-rotulo{font-size:10px;color:var(--cinza-400);text-transform:uppercase;font-weight:700;text-align:right;}
+.ficha-materiais{padding:18px 26px 26px;}
+.ficha-materiais h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--cinza-600);margin:0 0 12px;font-weight:700;}
+.ficha-grupo{margin-bottom:16px;}
+.ficha-grupo .titulo-grupo{font-size:11px;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;padding-bottom:5px;border-bottom:1.5px solid var(--cinza-200);}
+table.ficha-tabela{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.ficha-tabela th{text-align:left;font-size:10px;color:var(--cinza-400);text-transform:uppercase;font-weight:700;padding:5px 7px;border-bottom:1px solid var(--cinza-200);}
+table.ficha-tabela td{padding:7px 7px;border-bottom:1px solid var(--cinza-200);color:var(--cinza-900);}
+table.ficha-tabela td.num{text-align:right;font-family:Consolas,monospace;}
+.ficha-aviso{padding:50px 30px;text-align:center;color:var(--cinza-400);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titulo">
+    <div class="folha">🌿</div>
+    <div>
+      <h1>Supraervas - Painel de Controle de Produção Monster</h1>
+      <p>Hall das OPs → ⚖️ Pesagem → 🔄 Mistura → Finalizadas · dados em tempo real</p>
+    </div>
+  </div>
+  <div class="upload-area">
+    <label class="upload-btn" for="arquivoInput">📤 Importar Relatório_OP_Aberto.xlsx</label>
+    <input type="file" id="arquivoInput" accept=".csv,.xlsx,.xls" onchange="importarArquivo(event)">
+    <button class="refresh-btn" onclick="carregarDoSheet()">🔄 Atualizar agora</button>
+    <span class="upload-status" id="uploadStatus"></span>
+  </div>
+</header>
+
+<!-- Pipeline visual -->
+<div class="pipeline-bar">
+  <div class="pipe-step hall-s">📋 Hall <span class="pipe-cnt" id="pipe-hall">0</span></div>
+  <div class="pipe-arrow">›</div>
+  <div class="pipe-step pes-s">⚖️ Pesagem <span class="pipe-cnt" id="pipe-pes">0</span></div>
+  <div class="pipe-arrow">›</div>
+  <div class="pipe-step mis-s">🔄 Mistura <span class="pipe-cnt" id="pipe-mis">0</span></div>
+  <div class="pipe-arrow">›</div>
+  <div class="pipe-step fim-s">✅ Finalizadas <span class="pipe-cnt" id="pipe-fim">0</span></div>
+</div>
+
+<main>
+  <div class="board">
+    <!-- Hall -->
+    <div class="coluna hall">
+      <div class="coluna-header">
+        <span class="rotulo"><span class="dot"></span>Hall das OPs</span>
+        <span class="contador" id="contHall">0</span>
+      </div>
+      <div class="cartoes" id="colHall"></div>
+    </div>
+
+    <!-- Em Produção — Pesagem + Mistura -->
+    <div class="grupo-producao">
+      <div class="grupo-producao-banner">
+        <div class="faixa">
+          <div class="grupo-producao-titulo">🏭 Em Produção</div>
+          <div class="grupo-producao-sub">Pesagem de matérias-primas → Mistura e homogeneização</div>
+        </div>
+      </div>
+      <div class="sub-board">
+        <div class="coluna pesagem">
+          <div class="coluna-header">
+            <span class="rotulo"><span class="dot"></span>⚖️ Etapa: Pesagem</span>
+            <span class="contador" id="contPesagem">0</span>
+          </div>
+          <div class="cartoes" id="colPesagem"></div>
+        </div>
+
+        <div class="coluna mistura">
+          <div class="coluna-header">
+            <span class="rotulo"><span class="dot"></span>🔄 Etapa: Mistura</span>
+            <span class="contador" id="contMistura">0</span>
+          </div>
+          <div class="cartoes" id="colMistura"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Finalizadas -->
+    <div class="coluna final">
+      <div class="coluna-header">
+        <span class="rotulo"><span class="dot"></span>OPs Finalizadas (hoje)</span>
+        <span class="contador" id="contFinal">0</span>
+      </div>
+      <div class="oee-dashboard" id="oeeDashboard"></div>
+      <div class="cartoes" id="colFinal"></div>
+    </div>
+  </div>
+</main>
+
+<footer style="max-width:1700px;margin:0 auto;padding:0 22px 30px;display:flex;justify-content:flex-end;">
+  <span class="refresh-status" id="refreshStatus" style="color:var(--cinza-400);"></span>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL -->
+<div class="overlay-ficha" id="overlayFicha" onclick="if(event.target===this) fecharFicha()">
+  <div class="modal-ficha">
+    <div class="modal-ficha-conteudo" id="conteudoFicha"></div>
+  </div>
+</div>
+
+<script>
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwDz3uar9K--nQEBeIXhlhpyxWZUzypHYLLmEUXmcEumfmF_jEvOsfmyoeYCiJaeftF/exec';
+const FORM_URL   = 'https://supraervas2-lgtm.github.io/formul-rio-produ-o/';
+
+let hall = [], emProducao = [], finalizadas = [], detalhesOP = {};
+let oeeStats = { medio7dias:{pesagem:0,mistura:0}, hoje:{pesagem:0,mistura:0} };
+
+/* ── Carregar dados ── */
+async function carregarDoSheet(){
+  const status = document.getElementById('refreshStatus');
+  status.textContent = 'Atualizando...';
+  try{
+    const resp = await fetch(SHEETS_URL + '?t=' + Date.now(), { cache:'no-store' });
+    const data = await resp.json();
+    if(data.status === 'ok'){
+      hall        = data.hall       || [];
+      emProducao  = data.emProducao || [];
+      finalizadas = data.finalizadas|| [];
+      oeeStats    = data.oeeStats   || oeeStats;
+      detalhesOP  = Object.assign({}, detalhesOP, data.detalhes || {});
+      salvarDetalhes();
+      renderTudo();
+      status.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+    } else {
+      status.textContent = '⚠️ Erro ao buscar dados.';
+    }
+  } catch(e){
+    console.error(e);
+    status.textContent = '⚠️ Sem conexão.';
+  }
+}
+
+async function postAcao(body){
+  await fetch(SHEETS_URL, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+}
+
+/* ── Importação ── */
+function normalizar(txt){ return String(txt||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function limparTexto(v){ if(v===null||v===undefined) return ''; return String(v).trim().replace(/^"+|"+$/g,'').trim(); }
+
+function validarColunasRelatorio(headerRow){
+  const norm = headerRow.map(h=>normalizar(h));
+  return ['empresa','codigo','grupo produto'].every(c=>norm.includes(c));
+}
+
+function extrairDoRelatorioOP(rows){
+  const header = rows[0].map(h=>normalizar(h));
+  const idx = n => header.indexOf(normalizar(n));
+  const iEmpresa=idx('empresa'),iCodigo=idx('codigo'),iData=idx('data'),
+        iQtde=idx('quantidade'),iCodProduto=idx('cod. produto'),iDescricao=idx('descricao'),
+        iGrupoProduto=idx('grupo produto'),iSubgrupoProduto=idx('subgrupo produto');
+  const vistos=new Set(), novas=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    if(!r||!r[iCodigo]) continue;
+    if(String(r[iEmpresa]).trim()!=='1') continue;
+    if(normalizar(r[iGrupoProduto])!==normalizar('M.P. INSUMOS')) continue;
+    const codigo=String(r[iCodigo]);
+    if(vistos.has(codigo)) continue;
+    vistos.add(codigo);
+    novas.push({ op:codigo, dataEmissao:limparTexto(r[iData]), codProduto:String(r[iCodProduto]??'').trim(),
+      descricao:limparTexto(r[iDescricao]), qtde:String(r[iQtde]??'').trim(), cliente:'', familia:limparTexto(r[iSubgrupoProduto]) });
+  }
+  return novas;
+}
+
+function extrairDetalhesCompletos(rows){
+  const header=rows[0].map(h=>normalizar(h));
+  const idx=n=>header.indexOf(normalizar(n));
+  const iSituacao=idx('situacao'),iEmpresa=idx('empresa'),iCodigo=idx('codigo'),iData=idx('data'),
+        iLoteProduto=idx('lote produto'),iVencProduto=idx('vencimento produto'),iQtde=idx('quantidade'),
+        iCodProduto=idx('cod. produto'),iDescricao=idx('descricao'),iGrupoProduto=idx('grupo produto'),
+        iSubgrupoProduto=idx('subgrupo produto'),iMateria=idx('materia prima'),iGrupoMat=idx('grupo materia'),
+        iSubgrupoMat=idx('subgrupo materia'),iQtdeMat=idx('qtde materia'),iLote=idx('lote'),iVenc=idx('vencimento');
+  const mapa={};
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    if(!r||!r[iCodigo]) continue;
+    if(String(r[iEmpresa]).trim()!=='1') continue;
+    const codigo=String(r[iCodigo]);
+    if(!mapa[codigo]){
+      mapa[codigo]={ codigo, situacao:limparTexto(r[iSituacao]), data:limparTexto(r[iData]),
+        lote_produto:limparTexto(r[iLoteProduto]), vencimento_produto:limparTexto(r[iVencProduto]),
+        quantidade:r[iQtde], cod_produto:r[iCodProduto], descricao:limparTexto(r[iDescricao]),
+        grupo_produto:limparTexto(r[iGrupoProduto]), subgrupo_produto:limparTexto(r[iSubgrupoProduto]), materiais:[] };
+    }
+    if(iMateria!==-1&&r[iMateria]){
+      mapa[codigo].materiais.push({ materia:limparTexto(r[iMateria]), grupo:limparTexto(r[iGrupoMat]),
+        subgrupo:limparTexto(r[iSubgrupoMat]), qtde:r[iQtdeMat], lote:limparTexto(r[iLote]), vencimento:limparTexto(r[iVenc]) });
+    }
+  }
+  return mapa;
+}
+
+async function carregarDetalhes(){
+  try{ const r=await window.storage.get('painel-detalhes-op'); detalhesOP=r?JSON.parse(r.value):{};
+  }catch(e){ detalhesOP={}; }
+}
+async function salvarDetalhes(){
+  try{ await window.storage.set('painel-detalhes-op', JSON.stringify(detalhesOP)); }catch(e){}
+}
+
+async function importarArquivo(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const status=document.getElementById('uploadStatus');
+  status.textContent='Lendo '+file.name+'...';
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array',cellDates:true});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,dateNF:'dd/mm/yyyy'});
+      if(rows.length<2){ status.textContent='⚠️ Arquivo vazio.'; return; }
+      if(!validarColunasRelatorio(rows[0])){ status.textContent='⚠️ Arquivo inválido.'; return; }
+      const existentes=new Set([...hall,...emProducao,...finalizadas].map(o=>o.op));
+      const novasOps=extrairDoRelatorioOP(rows).filter(o=>o.op&&!existentes.has(o.op));
+      const novosDetalhes=extrairDetalhesCompletos(rows);
+      detalhesOP={...detalhesOP,...novosDetalhes};
+      salvarDetalhes();
+      if(novasOps.length===0){ status.textContent='Nenhuma OP nova encontrada.'; return; }
+      status.textContent=`Enviando ${novasOps.length} OP(s)...`;
+      await postAcao({ acao:'importar_hall', ops:novasOps });
+      status.textContent=`✅ ${novasOps.length} OP(s) importada(s).`;
+      carregarDoSheet();
+    }catch(err){ console.error(err); status.textContent='⚠️ Erro ao ler arquivo.'; }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value='';
+}
+
+/* ── Renderização ── */
+function classeFamilia(f){
+  const n=normalizar(f);
+  if(n.includes('capsula')) return 'fam-capsula';
+  if(n.includes('comprimido')) return 'fam-comprimido';
+  if(n.includes('soluvel')) return 'fam-soluvel';
+  return 'fam-outro';
+}
+
+function renderTudo(){
+  const pesagem = emProducao.filter(o=>(o.etapa||'Pesagem')==='Pesagem');
+  const mistura = emProducao.filter(o=>o.etapa==='Mistura');
+
+  // Pipeline counters
+  document.getElementById('pipe-hall').textContent = hall.length;
+  document.getElementById('pipe-pes').textContent  = pesagem.length;
+  document.getElementById('pipe-mis').textContent  = mistura.length;
+  document.getElementById('pipe-fim').textContent  = finalizadas.length;
+
+  renderHall();
+  renderPesagem(pesagem);
+  renderMistura(mistura);
+  renderFinal();
+  renderOeeDashboard();
+}
+
+/* ── Velocímetros de OEE (SVG) ── */
+function polarPt(cx, cy, r, angDeg){
+  const rad = (angDeg * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+}
+function arcPath(cx, cy, r, angIni, angFim){
+  const p1 = polarPt(cx, cy, r, angIni);
+  const p2 = polarPt(cx, cy, r, angFim);
+  const largeArc = (angIni - angFim) > 180 ? 1 : 0;
+  return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} A ${r} ${r} 0 ${largeArc} 1 ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+}
+function gaugeSVG(valor){
+  const cx = 70, cy = 74, r = 58;
+  const bandas = [
+    { de:180, ate:120, cor:'#EF4444' },
+    { de:120, ate:60,  cor:'#F59E0B' },
+    { de:60,  ate:0,   cor:'#22C55E' }
+  ];
+  const bandasHtml = bandas.map(b => `<path d="${arcPath(cx,cy,r,b.de,b.ate)}" stroke="${b.cor}" stroke-width="13" fill="none"/>`).join('');
+  const v = Math.max(0, Math.min(100, Number(valor) || 0));
+  const angAgulha = 180 - (v/100)*180;
+  const pAgulha = polarPt(cx, cy, 42, angAgulha);
+  const cor = v >= 66 ? '#16A34A' : (v >= 33 ? '#D97706' : '#DC2626');
+  return `<svg viewBox="0 0 140 90" style="width:100%;max-width:120px;display:block;margin:0 auto;">
+    ${bandasHtml}
+    <line x1="${cx}" y1="${cy}" x2="${pAgulha.x.toFixed(1)}" y2="${pAgulha.y.toFixed(1)}" stroke="#EAF3EC" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="4.5" fill="#EAF3EC"/>
+    <text x="${cx}" y="${cy-6}" text-anchor="middle" font-family="Segoe UI, Arial" font-size="19" font-weight="800" fill="${cor}">${v.toFixed(0)}%</text>
+  </svg>`;
+}
+function renderOeeDashboard(){
+  const el = document.getElementById('oeeDashboard');
+  if(!el) return;
+  const m7 = oeeStats.medio7dias || {pesagem:0,mistura:0};
+  const hj = oeeStats.hoje || {pesagem:0,mistura:0};
+  el.innerHTML = `
+    <div class="gauge-card">
+      <div class="gauge-titulo">OEE Médio (7d)</div>
+      ${gaugeSVG(m7.pesagem)}
+      <div class="gauge-sub">⚖️ Pesagem</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-titulo">OEE Médio (7d)</div>
+      ${gaugeSVG(m7.mistura)}
+      <div class="gauge-sub">🔄 Mistura</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-titulo">OEE Hoje</div>
+      ${gaugeSVG(hj.pesagem)}
+      <div class="gauge-sub">⚖️ Pesagem</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-titulo">OEE Hoje</div>
+      ${gaugeSVG(hj.mistura)}
+      <div class="gauge-sub">🔄 Mistura</div>
+    </div>
+  `;
+}
+
+function renderHall(){
+  const el=document.getElementById('colHall');
+  document.getElementById('contHall').textContent=hall.length;
+  if(!hall.length){ el.innerHTML='<div class="vazio">Nenhuma OP pendente.<br>Importe um arquivo acima.</div>'; return; }
+  el.innerHTML=hall.map(o=>`
+    <div class="cartao" onclick="abrirFicha('${escapeAttr(o.op)}')">
+      <div class="linha-topo">
+        <span class="op-num">OP ${escapeHtml(o.op)}</span>
+        <span class="data-emissao">${escapeHtml(o.dataEmissao)}</span>
+      </div>
+      <div class="descricao">${escapeHtml(o.descricao||'(sem descrição)')}</div>
+      ${o.familia?`<span class="tag-familia ${classeFamilia(o.familia)}">${escapeHtml(o.familia)}</span>`:''}
+      <div class="meta" style="margin-top:6px;">
+        <div>Código: <b>${escapeHtml(o.codProduto)}</b></div>
+        <div>Qtde: <b>${escapeHtml(o.qtde)}</b></div>
+        <div style="grid-column:1/-1;">Cliente: <b>${escapeHtml(o.cliente)||'—'}</b></div>
+      </div>
+      <button class="btn btn-iniciar" onclick="event.stopPropagation();iniciarProducao('${escapeAttr(o.op)}')">▶ Iniciar Produção</button>
+    </div>`).join('');
+}
+
+function renderPesagem(lista){
+  const el=document.getElementById('colPesagem');
+  document.getElementById('contPesagem').textContent=lista.length;
+  if(!lista.length){ el.innerHTML='<div class="vazio">Nenhuma OP em Pesagem.</div>'; return; }
+  el.innerHTML=lista.map(o=>`
+    <div class="cartao" onclick="abrirFicha('${escapeAttr(o.op)}')">
+      <span class="badge-etapa-cartao badge-pesagem-c">⚖️ Pesagem</span>
+      <div class="linha-topo">
+        <span class="op-num">OP ${escapeHtml(o.op)}</span>
+        <span class="data-emissao">${escapeHtml(o.dataEmissao)}</span>
+      </div>
+      <div class="descricao">${escapeHtml(o.descricao||'(sem descrição)')}</div>
+      ${o.familia?`<span class="tag-familia ${classeFamilia(o.familia)}">${escapeHtml(o.familia)}</span>`:''}
+      ${blocoInicioEtapa(o.inicioEtapa)}
+      <div class="meta" style="margin-top:6px;">
+        <div>Código: <b>${escapeHtml(o.codProduto)}</b></div>
+        <div>Qtde: <b>${escapeHtml(o.qtde)}</b></div>
+      </div>
+      <a class="btn btn-registrar-pes" href="${FORM_URL}" target="_blank" onclick="event.stopPropagation()">📋 Registrar Pesagem</a>
+      <button class="btn-devolver" onclick="event.stopPropagation();devolverHall('${escapeAttr(o.op)}')">↩ Devolver ao Hall</button>
+    </div>`).join('');
+}
+
+function renderMistura(lista){
+  const el=document.getElementById('colMistura');
+  document.getElementById('contMistura').textContent=lista.length;
+  if(!lista.length){ el.innerHTML='<div class="vazio">Nenhuma OP em Mistura.</div>'; return; }
+  el.innerHTML=lista.map(o=>`
+    <div class="cartao" onclick="abrirFicha('${escapeAttr(o.op)}')">
+      <span class="badge-etapa-cartao badge-mistura-c">🔄 Mistura</span>
+      <div class="linha-topo">
+        <span class="op-num">OP ${escapeHtml(o.op)}</span>
+        <span class="data-emissao">${escapeHtml(o.dataEmissao)}</span>
+      </div>
+      <div class="descricao">${escapeHtml(o.descricao||'(sem descrição)')}</div>
+      ${o.familia?`<span class="tag-familia ${classeFamilia(o.familia)}">${escapeHtml(o.familia)}</span>`:''}
+      ${blocoInicioEtapa(o.inicioEtapa)}
+      <div class="meta" style="margin-top:6px;">
+        <div>Código: <b>${escapeHtml(o.codProduto)}</b></div>
+        <div>Qtde: <b>${escapeHtml(o.qtde)}</b></div>
+      </div>
+      <a class="btn btn-registrar-mis" href="${FORM_URL}" target="_blank" onclick="event.stopPropagation()">📋 Registrar Mistura</a>
+      <button class="btn-devolver" onclick="event.stopPropagation();devolverHall('${escapeAttr(o.op)}')">↩ Devolver ao Hall</button>
+    </div>`).join('');
+}
+
+function renderFinal(){
+  const el=document.getElementById('colFinal');
+  document.getElementById('contFinal').textContent=finalizadas.length;
+  if(!finalizadas.length){ el.innerHTML='<div class="vazio">Nenhuma OP finalizada hoje.</div>'; return; }
+  el.innerHTML=finalizadas.slice().reverse().map(o=>`
+    <div class="cartao" onclick="abrirFicha('${escapeAttr(o.op)}')">
+      <div class="linha-topo">
+        <span class="op-num">OP ${escapeHtml(o.op)}</span>
+        <span class="tag-concluida">✔ Concluída</span>
+      </div>
+      <div class="descricao">${escapeHtml(o.produto||'(sem descrição)')}</div>
+      <div class="meta">
+        <div>Produzido: <b>${escapeHtml(o.produzido)}</b></div>
+        <div>Refugo: <b>${escapeHtml(o.refugo||'0')}</b></div>
+        <div>Retrabalho: <b>${escapeHtml(o.retrabalho||'0')}</b></div>
+        <div>Perda: <b${Number(o.perda_processo)>0?' style="color:var(--vermelho);"':''}>${escapeHtml(o.perda_processo||'0')}${o.unid_perda?' '+escapeHtml(o.unid_perda):''}</b></div>
+      </div>
+      <div class="meta-final">Turno ${escapeHtml(o.turno)} · ${escapeHtml(o.hora_inicio||'')}–${escapeHtml(o.hora_termino||'')} · ${escapeHtml(o.operador)} · ${escapeHtml(o.maquina)}</div>
+    </div>`).join('');
+}
+
+/* ── Ações ── */
+async function iniciarProducao(opNum){
+  mostrarToast('▶ Movendo para Pesagem...');
+  await postAcao({ acao:'iniciar_producao', op:opNum });
+  setTimeout(carregarDoSheet, 1500);
+}
+
+async function devolverHall(opNum){
+  mostrarToast('↩ Devolvendo ao Hall...');
+  await postAcao({ acao:'devolver_hall', op:opNum });
+  setTimeout(carregarDoSheet, 1500);
+}
+
+/* ── Modal ── */
+function abrirFicha(opNum){
+  const det=detalhesOP[opNum];
+  const conteudo=document.getElementById('conteudoFicha');
+  if(!det){
+    conteudo.innerHTML=`
+      <div class="ficha-topo">
+        <div><div class="marca">🌿 Supraervas</div><div class="subtitulo">Ficha da OP</div></div>
+        <button class="ficha-fechar" onclick="fecharFicha()">✕</button>
+      </div>
+      <div class="ficha-aviso">⚠️ OP <b>${escapeHtml(opNum)}</b> sem detalhe carregado.<br>Importe o Relatório_OP_Aberto.xlsx.</div>`;
+    document.getElementById('overlayFicha').classList.add('ativo');
+    return;
+  }
+  const finalizado=normalizar(det.situacao).includes('finalizad')&&!normalizar(det.situacao).includes('nao')&&!normalizar(det.situacao).includes('não');
+  const grupos={};
+  det.materiais.forEach(m=>{ const g=m.grupo||'Outros'; if(!grupos[g]) grupos[g]=[]; grupos[g].push(m); });
+  const gruposHtml=Object.keys(grupos).map(grupo=>`
+    <div class="ficha-grupo">
+      <div class="titulo-grupo">${escapeHtml(grupo)}</div>
+      <table class="ficha-tabela">
+        <thead><tr><th>Matéria-Prima</th><th>Lote</th><th>Venc.</th><th style="text-align:right;">Qtde</th></tr></thead>
+        <tbody>${grupos[grupo].map(m=>`
+          <tr>
+            <td>${escapeHtml(m.materia)}</td>
+            <td>${escapeHtml(m.lote)||'—'}</td>
+            <td>${escapeHtml(m.vencimento)||'—'}</td>
+            <td class="num">${formatarQtdeFicha(m.qtde)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`).join('');
+  conteudo.innerHTML=`
+    <div class="ficha-topo">
+      <div><div class="marca">🌿 Supraervas</div><div class="subtitulo">Ficha da OP</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="op-box"><div class="rotulo">Nº OP</div><div class="valor">${escapeHtml(det.codigo)}</div></div>
+        <button class="ficha-fechar" onclick="fecharFicha()">✕</button>
+      </div>
+    </div>
+    <div class="ficha-info">
+      <div class="ficha-grid-info">
+        <div class="ficha-campo"><div class="rotulo">Situação</div><div class="valor">
+          <span style="display:inline-flex;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;background:${finalizado?'var(--verde-bg)':'var(--ambar-bg)'};color:${finalizado?'var(--verde-escuro)':'var(--ambar)'};">${finalizado?'Finalizado':'Não Finalizado'}</span>
+        </div></div>
+        <div class="ficha-campo"><div class="rotulo">Data de Emissão</div><div class="valor">${escapeHtml(det.data)||'—'}</div></div>
+        <div class="ficha-campo"><div class="rotulo">Lote do Produto</div><div class="valor">${escapeHtml(det.lote_produto)||'—'}</div></div>
+        <div class="ficha-campo"><div class="rotulo">Validade</div><div class="valor">${escapeHtml(det.vencimento_produto)||'—'}</div></div>
+      </div>
+    </div>
+    <div class="ficha-produto">
+      <div>
+        <div class="nome">${escapeHtml(det.cod_produto)} — ${escapeHtml(det.descricao)}</div>
+        <div class="grupo">${escapeHtml(det.grupo_produto)} · ${escapeHtml(det.subgrupo_produto)}</div>
+      </div>
+      <div>
+        <div class="qtde-valor">${formatarQtdeFicha(det.quantidade)}</div>
+        <div class="qtde-rotulo">Qtde a Produzir</div>
+      </div>
+    </div>
+    <div class="ficha-materiais">
+      <h3>Matéria-Prima (${det.materiais.length} itens)</h3>
+      ${gruposHtml||'<div style="color:var(--cinza-400);font-size:13px;">Nenhum item registrado.</div>'}
+    </div>`;
+  document.getElementById('overlayFicha').classList.add('ativo');
+}
+
+function fecharFicha(){ document.getElementById('overlayFicha').classList.remove('ativo'); }
+
+function formatarQtdeFicha(v){
+  if(v===null||v===undefined||v==='') return '—';
+  const n=Number(v);
+  if(isNaN(n)) return escapeHtml(v);
+  return n.toLocaleString('pt-BR',{maximumFractionDigits:4});
+}
+
+function mostrarToast(msg,cor){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=cor||'#A6FF2E'; t.style.display='block';
+  setTimeout(()=>t.style.display='none',3000);
+}
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return String(s??'').replace(/'/g,"\\'"); }
+
+/* ── Tempo decorrido desde o início da etapa (Pesagem/Mistura) ── */
+function parseDataHoraBR(str){
+  if(!str) return null;
+  const m = String(str).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+  if(!m) return null;
+  return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5]);
+}
+function tempoDecorridoTexto(dataHoraStr){
+  const d = parseDataHoraBR(dataHoraStr);
+  if(!d) return null;
+  const diffMs = Date.now() - d.getTime();
+  if(diffMs < 0) return 'agora';
+  const totalMin = Math.floor(diffMs/60000);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+function classeTempoParado(dataHoraStr){
+  const d = parseDataHoraBR(dataHoraStr);
+  if(!d) return 'tempo-ok';
+  const horas = (Date.now()-d.getTime())/3600000;
+  if(horas >= 2) return 'tempo-critico';
+  if(horas >= 1) return 'tempo-alerta';
+  return 'tempo-ok';
+}
+function blocoInicioEtapa(inicioEtapa){
+  if(!inicioEtapa) return '';
+  const decorrido = tempoDecorridoTexto(inicioEtapa);
+  return `<div class="tempo-parado ${classeTempoParado(inicioEtapa)}">
+    ⏱ Iniciado em ${escapeHtml(inicioEtapa)}${decorrido ? ` · há ${decorrido}` : ''}
+  </div>`;
+}
+
+/* ── Init ── */
+carregarDetalhes();
+carregarDoSheet();
+setInterval(carregarDoSheet, 20000);
+</script>
+</body>
+</html>
